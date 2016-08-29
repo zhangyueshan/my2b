@@ -13,5 +13,7 @@ public class ToBeMain {
     public static void main(String[] args) throws IOException {
         Socket socket = new Socket("192.168.2.9", 3306);
         InputStream is = socket.getInputStream();
+        byte[] buf = new byte[1024];
+        is.read(buf);
     }
 }
