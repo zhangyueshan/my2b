@@ -1,5 +1,6 @@
 package wings.my2b.io;
 
+import wings.my2b.StringUtils;
 import wings.my2b.exception.My2bException;
 
 import java.io.IOException;
@@ -22,19 +23,21 @@ public class ToBeMain {
         byte[] buf = new byte[packetLength];
         readFully(is, buf, 0, packetLength);
         Packet packet = new Packet(buf);
+        int serverCapabilities = 0;
         System.out.println("协议版本号：" + packet.readByte());
         System.out.println("服务器版本号：" + packet.readNullEndString("ASCII"));
         System.out.println("服务器线程ID：" + packet.read4Int());
-        System.out.println("挑战随机数1：" + packet.read8Int());
+        System.out.println("挑战随机数1：" + packet.readLengthExpectedString("ASCII", 8));
         System.out.println("填充：" + packet.readByte());
-        packet.jump(2);
-        packet.jump(1);
-        packet.jump(2);
-        packet.jump(2);
-        packet.jump(1);
-        byte[] bytes = packet.readBytes(10);
-
-        System.out.println("挑战随机数2：" + packet.read8Int());
+        serverCapabilities = packet.read2Int();
+        System.out.println("字符编码：" + "0x" + StringUtils.hexString(packet.readBytes(1)));
+        System.out.println("服务器状态：" + "0x" + StringUtils.hexString(packet.readBytes(2)));
+        serverCapabilities |= packet.read2Int() << 16;
+        System.out.println(StringUtils.hexString(StringUtils.intToByteArray(serverCapabilities)));
+        System.out.println("挑战长度：" + packet.readByte());
+        System.out.println("填充2：" + packet.readLengthExpectedString("ASCII", 10));
+        System.out.println("挑战随机数2：" + packet.readLengthExpectedString("ASCII", 12));
+        System.out.println("end：" + packet.readByte());
     }
 
     private static int readFully(InputStream in, byte[] b, int off, int len) throws IOException {

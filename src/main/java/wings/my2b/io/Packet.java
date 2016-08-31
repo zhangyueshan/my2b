@@ -4,7 +4,6 @@ import wings.my2b.StringUtils;
 import wings.my2b.exception.My2bException;
 
 import java.io.UnsupportedEncodingException;
-import java.sql.SQLException;
 
 /**
  * Created by InThEnd on 2016/8/29.
