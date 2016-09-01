@@ -32,12 +32,14 @@ public class ToBeMain {
         serverCapabilities = packet.read2Int();
         System.out.println("字符编码：" + "0x" + StringUtils.hexString(packet.readBytes(1)));
         System.out.println("服务器状态：" + "0x" + StringUtils.hexString(packet.readBytes(2)));
-        serverCapabilities |= packet.read2Int() << 16;
-        System.out.println(StringUtils.hexString(StringUtils.intToByteArray(serverCapabilities)));
+//        serverCapabilities |= packet.read2Int() << 16;
+        packet.read2Int();
+        System.out.println(serverCapabilities);
         System.out.println("挑战长度：" + packet.readByte());
         System.out.println("填充2：" + packet.readLengthExpectedString("ASCII", 10));
         System.out.println("挑战随机数2：" + packet.readLengthExpectedString("ASCII", 12));
         System.out.println("end：" + packet.readByte());
+        System.out.println("位置：" + packet.getPosition());
     }
 
     private static int readFully(InputStream in, byte[] b, int off, int len) throws IOException {
