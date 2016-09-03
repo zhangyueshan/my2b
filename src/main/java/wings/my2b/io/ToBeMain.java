@@ -15,31 +15,9 @@ public class ToBeMain {
 
     public static void main(String[] args) throws IOException {
         Socket socket = new Socket("192.168.2.9", 3306);
-        InputStream is = socket.getInputStream();
-        byte[] packetHeaderBuf = new byte[4];
-        readFully(is, packetHeaderBuf, 0, 4);
-        int packetLength = (packetHeaderBuf[0] & 0xff) + ((packetHeaderBuf[1] & 0xff) << 8) + ((packetHeaderBuf[2] & 0xff) << 16);
-        System.out.println("包长度：" + packetLength);
-        byte[] buf = new byte[packetLength];
-        readFully(is, buf, 0, packetLength);
-        Packet packet = new Packet(buf);
-        int serverCapabilities = 0;
-        System.out.println("协议版本号：" + packet.readByte());
-        System.out.println("服务器版本号：" + packet.readNullEndString("ASCII"));
-        System.out.println("服务器线程ID：" + packet.read4Int());
-        System.out.println("挑战随机数1：" + packet.readLengthExpectedString("ASCII", 8));
-        System.out.println("填充：" + packet.readByte());
-        serverCapabilities = packet.read2Int();
-        System.out.println("字符编码：" + "0x" + StringUtils.hexString(packet.readBytes(1)));
-        System.out.println("服务器状态：" + "0x" + StringUtils.hexString(packet.readBytes(2)));
-//        serverCapabilities |= packet.read2Int() << 16;
-        packet.read2Int();
-        System.out.println(serverCapabilities);
-        System.out.println("挑战长度：" + packet.readByte());
-        System.out.println("填充2：" + packet.readLengthExpectedString("ASCII", 10));
-        System.out.println("挑战随机数2：" + packet.readLengthExpectedString("ASCII", 12));
-        System.out.println("end：" + packet.readByte());
-        System.out.println("位置：" + packet.getPosition());
+        My2bIO io = new My2bIO(socket);
+        io.doHandShake();
+        System.out.println();
     }
 
     private static int readFully(InputStream in, byte[] b, int off, int len) throws IOException {
