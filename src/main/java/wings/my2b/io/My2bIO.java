@@ -112,7 +112,7 @@ public class My2bIO {
 
         int packLength = ((userLength + passwordLength + databaseLength) * 3) + 7 + HEADER_LENGTH + AUTH_411_OVERHEAD;
         Packet toServer = new Packet(new byte[packetLength]);
-
+        System.out.println(packLength);
 
 
     }

@@ -1,6 +1,5 @@
 package wings.my2b.io;
 
-import wings.my2b.StringUtils;
 import wings.my2b.exception.My2bException;
 
 import java.io.IOException;
@@ -14,7 +13,7 @@ import java.net.Socket;
 public class ToBeMain {
 
     public static void main(String[] args) throws IOException {
-        Socket socket = new Socket("192.168.2.9", 3306);
+        Socket socket = new Socket("127.0.0.1", 3306);
         My2bIO io = new My2bIO(socket);
         io.doHandShake();
         System.out.println();
