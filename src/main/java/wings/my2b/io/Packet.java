@@ -4,6 +4,7 @@ import wings.my2b.StringUtils;
 import wings.my2b.exception.My2bException;
 
 import java.io.UnsupportedEncodingException;
+import java.sql.SQLException;
 
 /**
  * Created by InThEnd on 2016/8/29.
@@ -15,7 +16,7 @@ public class Packet {
     private byte[] byteBuffer;
 
     //packet length
-    private int bufLength;
+    private int bufLength = 0;
 
     //read position
     private int position = 0;
@@ -32,6 +33,10 @@ public class Packet {
 
     public int getBufLength() {
         return bufLength;
+    }
+
+    public void setBufLength(int bufLength) {
+        this.bufLength = bufLength;
     }
 
     public int getPosition() {
@@ -121,6 +126,69 @@ public class Packet {
         System.arraycopy(this.byteBuffer, position, dest, 0, len);
         position += len;
         return dest;
+    }
+
+
+    final void write4Int(long i) throws SQLException {
+        ensureCapacity(4);
+
+        byte[] b = this.byteBuffer;
+        b[this.position++] = (byte) (i & 0xff);
+        b[this.position++] = (byte) (i >>> 8);
+        b[this.position++] = (byte) (i >>> 16);
+        b[this.position++] = (byte) (i >>> 24);
+    }
+
+    final void writeLongInt(int i) throws SQLException {
+        ensureCapacity(3);
+        byte[] b = this.byteBuffer;
+        b[this.position++] = (byte) (i & 0xff);
+        b[this.position++] = (byte) (i >>> 8);
+        b[this.position++] = (byte) (i >>> 16);
+    }
+
+    final void writeLongLong(long i) throws SQLException {
+        ensureCapacity(8);
+        byte[] b = this.byteBuffer;
+        b[this.position++] = (byte) (i & 0xff);
+        b[this.position++] = (byte) (i >>> 8);
+        b[this.position++] = (byte) (i >>> 16);
+        b[this.position++] = (byte) (i >>> 24);
+        b[this.position++] = (byte) (i >>> 32);
+        b[this.position++] = (byte) (i >>> 40);
+        b[this.position++] = (byte) (i >>> 48);
+        b[this.position++] = (byte) (i >>> 56);
+    }
+
+
+    private void ensureCapacity(int additionalData) {
+        if ((this.position + additionalData) > getBufLength()) {
+            if ((this.position + additionalData) < this.byteBuffer.length) {
+                // byteBuffer.length is != getBufLength() all of the time due to re-using of packets (we don't shrink them)
+                //
+                // If we can, don't re-alloc, just set buffer length to size of current buffer
+                setBufLength(this.byteBuffer.length);
+            } else {
+                //
+                // Otherwise, re-size, and pad so we can avoid allocing again in the near future
+                //
+                int newLength = (int) (this.byteBuffer.length * 1.25);
+
+                if (newLength < (this.byteBuffer.length + additionalData)) {
+                    newLength = this.byteBuffer.length + (int) (additionalData * 1.25);
+                }
+
+                if (newLength < this.byteBuffer.length) {
+                    newLength = this.byteBuffer.length + additionalData;
+                }
+
+                byte[] newBytes = new byte[newLength];
+
+                System.arraycopy(this.byteBuffer, 0, newBytes, 0, this.byteBuffer.length);
+                this.byteBuffer = newBytes;
+                setBufLength(this.byteBuffer.length);
+            }
+        }
     }
 
 

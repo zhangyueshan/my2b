@@ -13,6 +13,9 @@ import java.net.Socket;
  */
 public class My2bIO {
 
+    protected static final int HEADER_LENGTH = 4;
+    protected static final int AUTH_411_OVERHEAD = 33;
+
 
     private static final int CLIENT_LONG_PASSWORD = 0x00000001; /* new more secure passwords */
     private static final int CLIENT_FOUND_ROWS = 0x00000002;
@@ -101,7 +104,16 @@ public class My2bIO {
         newSeed.append(seedPart2);
         this.seed = newSeed.toString();
 
-        Packet toServer = new Packet();
+        String user = "root";
+        String database = "ucoin";
+        int passwordLength = 16;
+        int userLength = (user != null) ? user.length() : 0;
+        int databaseLength = (database != null) ? database.length() : 0;
+
+        int packLength = ((userLength + passwordLength + databaseLength) * 3) + 7 + HEADER_LENGTH + AUTH_411_OVERHEAD;
+        Packet toServer = new Packet(new byte[packetLength]);
+
+
 
     }
 
