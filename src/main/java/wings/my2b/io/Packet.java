@@ -4,6 +4,7 @@ import wings.my2b.StringUtils;
 import wings.my2b.exception.My2bException;
 
 import java.io.UnsupportedEncodingException;
+import java.sql.SQLException;
 
 /**
  * Created by InThEnd on 2016/8/29.
@@ -138,7 +139,7 @@ public class Packet {
         b[this.position++] = (byte) (i >>> 24);
     }
 
-    final void writeLongInt(int i) {
+    final void write3Int(int i) {
         ensureCapacity(3);
         byte[] b = this.byteBuffer;
         b[this.position++] = (byte) (i & 0xff);
@@ -146,7 +147,7 @@ public class Packet {
         b[this.position++] = (byte) (i >>> 16);
     }
 
-    final void writeLongLong(long i) {
+    final void write8Int(long i) {
         ensureCapacity(8);
         byte[] b = this.byteBuffer;
         b[this.position++] = (byte) (i & 0xff);
@@ -157,6 +158,11 @@ public class Packet {
         b[this.position++] = (byte) (i >>> 40);
         b[this.position++] = (byte) (i >>> 48);
         b[this.position++] = (byte) (i >>> 56);
+    }
+
+    final void writeByte(byte b) {
+        ensureCapacity(1);
+        this.byteBuffer[this.position++] = b;
     }
 
 

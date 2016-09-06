@@ -1,11 +1,16 @@
 package wings.my2b.io;
 
+import com.mysql.jdbc.*;
 import wings.my2b.exception.My2bException;
 import wings.my2b.exception.UnsupportedProtocolVersionException;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
+import java.lang.ref.SoftReference;
 import java.net.Socket;
+import java.sql.SQLException;
+import java.util.zip.Deflater;
 
 /**
  * Created by InThEnd on 2016/9/1.
@@ -15,6 +20,10 @@ public class My2bIO {
 
     protected static final int HEADER_LENGTH = 4;
     protected static final int AUTH_411_OVERHEAD = 33;
+
+    protected static final int COMP_HEADER_LENGTH = 3;
+
+    protected static final int MIN_COMPRESS_LEN = 50;
 
 
     private static final int CLIENT_LONG_PASSWORD = 0x00000001; /* new more secure passwords */
@@ -57,9 +66,33 @@ public class My2bIO {
 
     private int serverStatus;
 
+    private int maxAllowedPacket;
 
-    public My2bIO(Socket conn) {
+    //max packet len
+    private int maxThreeBytes = (256 * 256 * 256) - 1;
+
+    private boolean useNewLargePackets = true;
+
+    private int serverMajorVersion = 0;
+    private int serverMinorVersion = 0;
+    private int serverSubMinorVersion = 0;
+
+    private boolean useCompression = false;
+
+    private byte packetSequence = 0;
+    private byte compressedPacketSequence = 0;
+
+    private Deflater deflater = null;
+
+    private InputStream is;
+
+    private OutputStream os;
+
+    public My2bIO(Socket conn) throws IOException {
         this.conn = conn;
+        is = conn.getInputStream();
+        os = conn.getOutputStream();
+
     }
 
 
@@ -156,5 +189,42 @@ public class My2bIO {
 
         return n;
     }
+
+    /**
+     * @param packet
+     * @param packetLen length of header + payload
+     * @throws SQLException
+     */
+    private final void send(Packet packet, int packetLen) throws SQLException {
+        try {
+            if (this.maxAllowedPacket > 0 && packetLen > this.maxAllowedPacket) {
+                throw new PacketTooBigException(packetLen, this.maxAllowedPacket);
+            }
+
+            if ((this.serverMajorVersion >= 4) && (packetLen - HEADER_LENGTH >= this.maxThreeBytes
+                    || (this.useCompression && packetLen - HEADER_LENGTH >= this.maxThreeBytes - COMP_HEADER_LENGTH))) {
+                //sendSplitPackets(packet, packetLen);
+
+            } else {
+                this.packetSequence++;
+
+                Packet packetToSend = packet;
+                packetToSend.setPosition(0);
+                packetToSend.write3Int(packetLen - HEADER_LENGTH);
+                packetToSend.writeByte(this.packetSequence);
+
+                if (this.useCompression) {
+                    //ignore now
+                }
+
+                os.write(packetToSend.getByteBuffer(), 0, packetLen);
+                os.flush();
+            }
+
+        } catch (IOException ioEx) {
+            throw new My2bException("IO异常。");
+        }
+    }
+
 
 }
