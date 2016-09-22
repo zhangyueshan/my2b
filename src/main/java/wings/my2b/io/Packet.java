@@ -4,7 +4,6 @@ import wings.my2b.StringUtils;
 import wings.my2b.exception.My2bException;
 
 import java.io.UnsupportedEncodingException;
-import java.sql.SQLException;
 
 /**
  * Created by InThEnd on 2016/8/29.
@@ -25,6 +24,12 @@ public class Packet {
     public Packet(byte[] buf) {
         this.byteBuffer = buf;
         this.bufLength = buf.length;
+    }
+
+    public Packet(int size) {
+        this.byteBuffer = new byte[size];
+        setBufLength(this.byteBuffer.length);
+        this.position = 4;
     }
 
     public byte[] getByteBuffer() {
@@ -165,6 +170,36 @@ public class Packet {
         this.byteBuffer[this.position++] = b;
     }
 
+    //	 Write null-terminated string in the given encoding
+    final void writeString(String s, String encoding) {
+        ensureCapacity((s.length() * 3) + 1);
+        try {
+            writeStringNoNull(s, encoding);
+        } catch (UnsupportedEncodingException ue) {
+            throw new My2bException("E");
+        }
+
+        this.byteBuffer[this.position++] = 0;
+    }
+
+    // Write a String using the specified character encoding
+    final void writeStringNoNull(String s, String encoding)
+            throws UnsupportedEncodingException {
+        byte[] b = s.getBytes(encoding);
+        int len = b.length;
+        ensureCapacity(len);
+        System.arraycopy(b, 0, this.byteBuffer, this.position, len);
+        this.position += len;
+    }
+
+    // Write a byte array
+    public final void writeBytes(byte[] bytes) {
+        int len = bytes.length;
+        ensureCapacity(len);
+        System.arraycopy(bytes, 0, this.byteBuffer, this.position, len);
+        this.position += len;
+    }
+
 
     private void ensureCapacity(int additionalData) {
         if ((this.position + additionalData) > getBufLength()) {
@@ -194,6 +229,12 @@ public class Packet {
                 setBufLength(this.byteBuffer.length);
             }
         }
+    }
+
+    public String toHexString() {
+        byte[] bytes1 = new byte[position];
+        System.arraycopy(this.byteBuffer, 0, bytes1, 0, position);
+        return StringUtils.hexString(bytes1);
     }
 
 

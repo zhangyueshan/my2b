@@ -5,6 +5,7 @@ import wings.my2b.exception.My2bException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.Socket;
+import java.security.NoSuchAlgorithmException;
 
 /**
  * Created by InThEnd on 2016/8/29.
@@ -12,8 +13,8 @@ import java.net.Socket;
  */
 public class ToBeMain {
 
-    public static void main(String[] args) throws IOException {
-        Socket socket = new Socket("127.0.0.1", 3306);
+    public static void main(String[] args) throws IOException, NoSuchAlgorithmException {
+        Socket socket = new Socket("192.168.2.9", 3306);
         My2bIO io = new My2bIO(socket);
         io.doHandShake();
         System.out.println();

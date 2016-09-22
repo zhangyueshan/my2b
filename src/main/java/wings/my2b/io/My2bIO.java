@@ -1,6 +1,8 @@
 package wings.my2b.io;
 
 import com.mysql.jdbc.*;
+import wings.my2b.*;
+import wings.my2b.StringUtils;
 import wings.my2b.exception.My2bException;
 import wings.my2b.exception.UnsupportedProtocolVersionException;
 
@@ -9,6 +11,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.lang.ref.SoftReference;
 import java.net.Socket;
+import java.security.NoSuchAlgorithmException;
 import java.sql.SQLException;
 import java.util.zip.Deflater;
 
@@ -29,15 +32,15 @@ public class My2bIO {
     private static final int CLIENT_LONG_PASSWORD = 0x00000001; /* new more secure passwords */
     private static final int CLIENT_FOUND_ROWS = 0x00000002;
     private static final int CLIENT_LONG_FLAG = 0x00000004; /* Get all column flags */
-    protected static final int CLIENT_CONNECT_WITH_DB = 0x00000008;
+    private static final int CLIENT_CONNECT_WITH_DB = 0x00000008;
     private static final int CLIENT_COMPRESS = 0x00000020; /* Can use compression protcol */
     private static final int CLIENT_LOCAL_FILES = 0x00000080; /* Can use LOAD DATA LOCAL */
     private static final int CLIENT_PROTOCOL_41 = 0x00000200; // for > 4.1.1
     private static final int CLIENT_INTERACTIVE = 0x00000400;
-    protected static final int CLIENT_SSL = 0x00000800;
+    private static final int CLIENT_SSL = 0x00000800;
     private static final int CLIENT_TRANSACTIONS = 0x00002000; // Client knows about transactions
-    protected static final int CLIENT_RESERVED = 0x00004000; // for 4.1.0 only
-    protected static final int CLIENT_SECURE_CONNECTION = 0x00008000;
+    private static final int CLIENT_RESERVED = 0x00004000; // for 4.1.0 only
+    private static final int CLIENT_SECURE_CONNECTION = 0x00008000;
     private static final int CLIENT_MULTI_STATEMENTS = 0x00010000; // Enable/disable multiquery support
     private static final int CLIENT_MULTI_RESULTS = 0x00020000; // Enable/disable multi-results
     private static final int CLIENT_PLUGIN_AUTH = 0x00080000;
@@ -88,6 +91,8 @@ public class My2bIO {
 
     private OutputStream os;
 
+    protected long clientParam = 0;
+
     public My2bIO(Socket conn) throws IOException {
         this.conn = conn;
         is = conn.getInputStream();
@@ -96,7 +101,7 @@ public class My2bIO {
     }
 
 
-    public void doHandShake() throws IOException {
+    public void doHandShake() throws IOException, NoSuchAlgorithmException {
         InputStream is = conn.getInputStream();
         byte[] packetHeaderBuf = new byte[4];
         readFully(is, packetHeaderBuf, 0, 4);
@@ -137,17 +142,56 @@ public class My2bIO {
         newSeed.append(seedPart2);
         this.seed = newSeed.toString();
 
+        this.clientParam |= CLIENT_CONNECT_WITH_DB;
+        if ((this.serverCapabilities & CLIENT_LONG_FLAG) != 0) {
+            this.clientParam |= CLIENT_LONG_FLAG;
+        }
+        if ((this.serverCapabilities & CLIENT_DEPRECATE_EOF) != 0) {
+            this.clientParam |= CLIENT_DEPRECATE_EOF;
+        }
+        this.clientParam |= CLIENT_LONG_PASSWORD;
+        this.clientParam |= CLIENT_PROTOCOL_41;
+        this.clientParam |= CLIENT_TRANSACTIONS;
+        this.clientParam |= CLIENT_MULTI_RESULTS;
+        this.clientParam |= CLIENT_SECURE_CONNECTION;
+
         String user = "root";
+        String password = "qweqwe11";
         String database = "ucoin";
         int passwordLength = 16;
         int userLength = (user != null) ? user.length() : 0;
         int databaseLength = (database != null) ? database.length() : 0;
 
+
+        long clientParam2 = 0x0002a28f;
         int packLength = ((userLength + passwordLength + databaseLength) * 3) + 7 + HEADER_LENGTH + AUTH_411_OVERHEAD;
-        Packet toServer = new Packet(new byte[packetLength]);
-        System.out.println(packLength);
+        Packet toServer = new Packet(packetLength);
+//        toServer.write4Int(this.clientParam);
+        toServer.write4Int(clientParam2);
+        System.out.println("append client param ===>:" + toServer.toHexString());
+        toServer.write4Int(this.maxThreeBytes);
+        System.out.println("append max size ===>:" + toServer.toHexString());
+        toServer.writeByte((byte) 33);
+        System.out.println("append client charset ===>:" + toServer.toHexString());
+        toServer.writeBytes(new byte[23]);
+        System.out.println("append 23 blank ===>:" + toServer.toHexString());
+        toServer.writeString(user, "utf-8");
+        System.out.println("append username ===>:" + toServer.toHexString());
+        toServer.writeByte((byte) 0x14);
+        System.out.println("append password length ===>:" + toServer.toHexString());
+        toServer.writeBytes(StringUtils.scramble411(password, this.seed));
+        System.out.println("append password hash ===>:" + toServer.toHexString());
+        toServer.writeString(database, "utf-8");
+        System.out.println("append database ===>:" + toServer.toHexString());
+        send(toServer, toServer.getPosition());
 
 
+        byte[] packetHeaderBuf2 = new byte[4];
+        readFully(is, packetHeaderBuf2, 0, 4);
+        int packetLength2 = (packetHeaderBuf2[0] & 0xff) + ((packetHeaderBuf2[1] & 0xff) << 8) + ((packetHeaderBuf2[2] & 0xff) << 16);
+        byte[] buf2 = new byte[packetLength2];
+        readFully(is, buf2, 0, packetLength2);
+        Packet packet2 = new Packet(buf2);
     }
 
     private static int readFully(InputStream in, byte[] b, int off, int len) throws IOException {
@@ -195,10 +239,10 @@ public class My2bIO {
      * @param packetLen length of header + payload
      * @throws SQLException
      */
-    private final void send(Packet packet, int packetLen) throws SQLException {
+    private final void send(Packet packet, int packetLen) {
         try {
             if (this.maxAllowedPacket > 0 && packetLen > this.maxAllowedPacket) {
-                throw new PacketTooBigException(packetLen, this.maxAllowedPacket);
+                throw new My2bException("太他妈长了。");
             }
 
             if ((this.serverMajorVersion >= 4) && (packetLen - HEADER_LENGTH >= this.maxThreeBytes
